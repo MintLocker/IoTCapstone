@@ -41,16 +41,21 @@ def upload_file():
             return 'Unsupported file type'
 
 def merge_csv(new_file, existing_file_path):
-    new_data = csv.reader(new_file.stream.read().decode('utf-8').splitlines())
+    new_data = list(csv.reader(new_file.stream.read().decode('utf-8').splitlines()))
     existing_data = []
     
     with open(existing_file_path, 'r', newline='', encoding='utf-8') as existing_file:
         reader = csv.reader(existing_file)
         existing_data = list(reader)
-
-    with open(existing_file_path, 'a', newline='', encoding='utf-8') as existing_file:
+    
+    existing_data_set = set(map(tuple, existing_data))
+    new_data_set = set(map(tuple, new_data))
+    
+    merged_data_set = existing_data_set.union(new_data_set)
+    
+    with open(existing_file_path, 'w', newline='', encoding='utf-8') as existing_file:
         writer = csv.writer(existing_file)
-        for row in new_data:
+        for row in merged_data_set:
             writer.writerow(row)
 
 if __name__ == '__main__':
