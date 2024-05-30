@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentDate = new Date();
     let csvFileName = getCurrentCSVFileName(); // 현재 CSV 파일 이름을 가져오는 함수를 호출하여 초기화
     let currentPage = 0;
-    const rowsPerPage = 30;
+    let rowsPerPage = 30;
 
     // CSV 파일 이름을 현재 날짜의 포맷에 맞게 반환하는 함수
     function getCurrentCSVFileName() {
@@ -40,16 +40,17 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(data => {
             const rows = data.split('\n');
+            rowsPerPage = rows.length;
             const startIndex = currentPage * rowsPerPage;
             const endIndex = startIndex + rowsPerPage;
             const slicedRows = rows.slice(startIndex, endIndex);
             const tbody = document.querySelector('#table tbody');
-
+            //csv 없을 시 데이터가 없다는 메시지 출력
             if (slicedRows.length === 0) {
                 const tr = document.createElement('tr');
                 const td = document.createElement('td');
                 td.textContent = '저장된 데이터가 없습니다';
-                td.colSpan = 2; // 두 개의 열을 합침
+                td.colSpan = 2;
                 tr.appendChild(td);
                 tbody.appendChild(tr);
             } else {
