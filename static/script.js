@@ -13,8 +13,17 @@ document.addEventListener('DOMContentLoaded', function() {
         return `static/data/${dateFormat}.csv`;
     }
 
+    // 테이블 초기화 함수
+    function clearTable() {
+        const tbody = document.querySelector('#table tbody');
+        tbody.innerHTML = '';
+    }
+
     // CSV 파일에서 데이터를 읽어와서 HTML 테이블에 추가하는 함수
     function loadCSVData() {
+        // 테이블 초기화
+        clearTable();
+
         // 캐시 방지를 위한 쿼리 파라미터 추가
         const cacheBuster = new Date().getTime();
         fetch(`${csvFileName}?cacheBuster=${cacheBuster}`)
@@ -35,7 +44,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const endIndex = startIndex + rowsPerPage;
             const slicedRows = rows.slice(startIndex, endIndex);
             const tbody = document.querySelector('#table tbody');
-            tbody.innerHTML = '';
 
             if (slicedRows.length === 0) {
                 const tr = document.createElement('tr');
@@ -49,14 +57,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     const cells = row.split(',');
                     const tr = document.createElement('tr');
                     cells.forEach((cell, index) => {
-                    const td = document.createElement('td');
-                    if (index === 0 && cell.trim().endsWith('.JPG')) { // 첫 번째 열이 이미지 URL인 경우
+                        const td = document.createElement('td');
+                        if (index === 0 && cell.trim().endsWith('.JPG')) { // 첫 번째 열이 이미지 URL인 경우
                             const img = document.createElement('img');
                             img.src = `static/pics/${cell.trim()}`; // 이미지 URL 설정
                             img.width = 720; // 이미지 폭 설정 (원하는 크기로 조절)
                             img.height = 480; // 이미지 높이 설정 (원하는 크기로 조절)
                             td.appendChild(img); // 이미지를 td에 추가
-                    } else {
+                        } else {
                             td.textContent = cell.trim();
                         }
                         tr.appendChild(td);
