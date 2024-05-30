@@ -15,7 +15,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // CSV 파일에서 데이터를 읽어와서 HTML 테이블에 추가하는 함수
     function loadCSVData() {
-        fetch(csvFileName)
+        // 캐시 방지를 위한 쿼리 파라미터 추가
+        const cacheBuster = new Date().getTime();
+        fetch(`${csvFileName}?cacheBuster=${cacheBuster}`)
         .then(response => {
             if (!response.ok) {
                 if (response.status === 404) {
