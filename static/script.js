@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showTableDate() {
-        const tableDate =  document.getElementById('table_date');
+        const tableDate = document.getElementById('table_date');
         tableDate.textContent = `${currentDate.getFullYear()}년 ${(currentDate.getMonth() + 1).toString().padStart(2, '0')}월 ${currentDate.getDate().toString().padStart(2, '0')}일` + " 신호위반 차량 목록";
     }
 
@@ -132,4 +132,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadCSVData();
     updateTime();
     setInterval(updateTime, 1000);
+
+    // 1분마다 CSV 데이터를 다시 로드
+    setInterval(loadCSVData, 60000);
 });
