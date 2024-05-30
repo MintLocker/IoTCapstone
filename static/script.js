@@ -58,14 +58,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     const tr = document.createElement('tr');
                     cells.forEach((cell, index) => {
                         const td = document.createElement('td');
-                        if (index === 0 && cell.trim().endsWith('.JPG')) { // 첫 번째 열이 이미지 URL인 경우
+                        if (index === 0 && cell.trim().endsWith('.JPG')) { //테이블 첫 번째 열에 이미지 표시
                             const img = document.createElement('img');
-                            img.src = `static/pics/${cell.trim()}`; // 이미지 URL 설정
-                            img.width = 720; // 이미지 폭 설정 (원하는 크기로 조절)
-                            img.height = 480; // 이미지 높이 설정 (원하는 크기로 조절)
-                            td.appendChild(img); // 이미지를 td에 추가
+                            img.src = `static/pics/${cell.trim()}`;
+                            img.width = 720;
+                            img.height = 480;
+                            td.appendChild(img);
                         } else {
-                            td.textContent = cell.trim();
+                            td.textContent = cell.trim(); //두 번째 열에 위반 시간 표시
                         }
                         tr.appendChild(td);
                     });
@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error loading CSV file:', error);
-            // CSV 파일이 없을 경우, 기존 테이블 데이터 유지
+            // CSV 파일이 없을 경우, 데이터가 없다는 메시지 출력
             if (error.message === 'File not found') {
                 showTableDate();
                 const tbody = document.querySelector('#table tbody');
@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const tr = document.createElement('tr');
                 const td = document.createElement('td');
                 td.textContent = '저장된 데이터가 없습니다';
-                td.colSpan = 2; // 두 개의 열을 합침
+                td.colSpan = 2;
                 tr.appendChild(td);
                 tbody.appendChild(tr);
             }
