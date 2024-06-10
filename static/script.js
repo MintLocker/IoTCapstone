@@ -59,7 +59,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     const tr = document.createElement('tr');
                     cells.forEach((cell, index) => {
                         const td = document.createElement('td');
-                        if (index === 0 && cell.trim().endsWith('.JPG')) { //테이블 첫 번째 열에 이미지 표시
+                        const lowerCaseCell = cell.trim().toLowerCase();
+                        if (index === 0 && (lowerCaseCell.endsWith('.jpg') || lowerCaseCell.endsWith('.png'))) { //테이블 첫 번째 열에 이미지 표시
                             const img = document.createElement('img');
                             img.src = `static/pics/${cell.trim()}`;
                             img.width = 720;
