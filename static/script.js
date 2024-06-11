@@ -1,171 +1,140 @@
-#include <Servo.h> //서보 모터 헤더
-#include <MsTimer2.h> //타이머 인터럽트 헤더
-#include <SoftwareSerial.h> //블루투스 통신용 헤더
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.getElementById('table');
+    const prevButton = document.getElementById('prev-button');
+    const nextButton = document.getElementById('next-button');
+    let currentDate = new Date();
+    let csvFileName = getCurrentCSVFileName(); // 현재 CSV 파일 이름을 가져오는 함수를 호출하여 초기화
+    let currentPage = 0;
+    let rowsPerPage = 30;
 
-/*===Packet==========================================*/
-#define ACK 0xE0
-#define NAK 0xF0
-#define OP 0x01
-#define CL 0x02 //해당 코드에서는 사용되지 않으나 기능 확장용으로 추가
-#define AL 0x10
-
-/*===Bluetooth=======================================*/
-const char tx = 5;
-const char rx = 6;
-SoftwareSerial BTSerial(tx, rx);
-
-/*===LED, Buzzer=====================================*/
-const char rLedPin = 9;
-const char gLedPin = 8;
-const char buzPin = 7;
-bool state = LOW;
-
-/*===Ultrasonic======================================*/
-const char trigPin = 13;
-const char echoPin = 12; 
-long duration, cm;
-
-/*===Servo Motor=====================================*/
-Servo servo;
-const char servoPin = 4;
-
-/*===Button==========================================*/
-const char btnPin = 3;
-
-/*===etc=============================================*/
-bool locked = true;
-
-/*===function========================================*/
-//경고 작동 함수
-void alert() {
-  state = !state;
-  digitalWrite(rLedPin, state);
-  digitalWrite(buzPin, state);
-}
-
-//버튼 인터럽트 함수
-void closeLocker()  
-{
-  noInterrupts();
-  int curCm = cm;
-  interrupts();
-  if(curCm < 5){
-    digitalWrite(rLedPin, HIGH);
-    locked = true;
-    servo.write(90);
-  }
-}
-
-//초음파 센서 값 cm로 변환 함수
-long microsecondsToCentimeters(long microseconds)
-{
-  return microseconds / 29 / 2;
-}
-
-/*===main============================================*/
-void setup() {
-
-  //serial init
-  Serial.begin(115200);
-
-  //bluetooth init
-  BTSerial.begin(9600);
-
-  //servo init
-  servo.attach(servoPin);
-
-  //timer init
-  MsTimer2::set(1000, alert);
-
-  //led, buzzer init
-  pinMode(gLedPin, OUTPUT);  
-  pinMode(rLedPin, OUTPUT);
-  pinMode(buzPin, OUTPUT);
-
-  //ultrasonic init
-  pinMode(trigPin, OUTPUT);
-  pinMode(echoPin, INPUT); 
-  
-  //button init
-  pinMode(btnPin, INPUT);
-  attachInterrupt(digitalPinToInterrupt(btnPin), closeLocker, RISING);
-}
-
-void loop() {
-  //led
-  digitalWrite(gLedPin, locked ? LOW : HIGH);
-
-  //ultrasonic
-  digitalWrite(trigPin, LOW);
-  delayMicroseconds(2);
-  digitalWrite(trigPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
-  duration = pulseIn(echoPin, HIGH);
-  cm = microsecondsToCentimeters(duration);
-
-  /*
-  if(locked && cm > 5 ){ //잠금 상태에서 초음파 센서 값 일정 이상이면 경고
-    MsTimer2::start();
-  }
-  */
-  //bluetooth
-  if(BTSerial.available()){
-    char recieve = BTSerial.read();
-    if(recieve == 'D'){
-      MsTimer2::stop();
-      state = LOW;
-      digitalWrite(rLedPin, state);
-      digitalWrite(buzPin, state);
+    // CSV 파일 이름을 현재 날짜의 포맷에 맞게 반환하는 함수
+    function getCurrentCSVFileName() {
+        const dateFormat = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
+        return `static/data/${dateFormat}.csv`;
     }
-  }
-  delay(100);
-}
 
-/*===Serial Event====================================*/
-void serialEvent() {
-  byte packet[4];
-  char packetIndex = 0;
-  bool packetStarted = false;
-  while (Serial.available()) {
-    char inputByte = Serial.read();
+    // 테이블 초기화 함수
+    function clearTable() {
+        const tbody = document.querySelector('#table tbody');
+        tbody.innerHTML = '';
+    }
 
-    if (!packetStarted) {
-      if (inputByte == 0x47) { // 시작 바이트 확인
+    // CSV 파일에서 데이터를 읽어와서 HTML 테이블에 추가하는 함수
+    function loadCSVData() {
+        // 테이블 초기화
+        clearTable();
 
-        packetStarted = true;
-        packetIndex = 0;
-        packet[packetIndex++] = inputByte;
-      }
-    } else {
-      packet[packetIndex++] = inputByte;
-
-      if (packetIndex == 4) { // 패킷 전체가 올바른 경우 데이터 처리
-        if (packet[3] == 0x0A) { // 종료 바이트 확인
-          if (packet[1] | packet[2] == 0xFF) { // 체크섬 확인
-            if (packet[1] == OP) { //OPEN
-              locked = false;
-              servo.write(0);
-              Serial.println(ACK);
-            } else if(packet[1] == CL) { //CLOSE
-              locked = true;
-              servo.write(90);
-              Serial.println(ACK);
-            } else if (packet[1] == AL) { //ALERT
-              locked = true;
-              digitalWrite(gLedPin, LOW);
-              Serial.println(ACK);
-              MsTimer2::start();
+        // 캐시 방지를 위한 쿼리 파라미터 추가
+        const cacheBuster = new Date().getTime();
+        fetch(`${csvFileName}?cacheBuster=${cacheBuster}`)
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 404) {
+                    throw new Error('File not found');
+                } else {
+                    throw new Error('Network response was not ok');
+                }
             }
-          } else {
-            Serial.println(NAK); // 체크섬 오류
-          }
-        } else {
-          Serial.println(NAK); // 종료 바이트 오류
-        }
-        packetStarted = false;
-        packetIndex = 0;
-      }
+            showTableDate();
+            return response.text();
+        })
+        .then(data => {
+            const rows = data.split('\n');
+            rowsPerPage = rows.length;
+            const startIndex = currentPage * rowsPerPage;
+            const endIndex = startIndex + rowsPerPage;
+            const slicedRows = rows.slice(startIndex, endIndex);
+            const tbody = document.querySelector('#table tbody');
+            //csv 없을 시 데이터가 없다는 메시지 출력
+            if (slicedRows.length === 0) {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.textContent = '저장된 데이터가 없습니다';
+                td.colSpan = 2;
+                tr.appendChild(td);
+                tbody.appendChild(tr);
+            } else {
+                slicedRows.forEach(row => {
+                    const cells = row.split(',');
+                    const tr = document.createElement('tr');
+                    cells.forEach((cell, index) => {
+                        const td = document.createElement('td');
+                        const lowerCaseCell = cell.trim().toLowerCase();
+                        if (index === 0 && (lowerCaseCell.endsWith('.jpg') || lowerCaseCell.endsWith('.png'))) { //테이블 첫 번째 열에 이미지 표시
+                            const img = document.createElement('img');
+                            img.src = `static/pics/${cell.trim()}`;
+                            img.width = 720;
+                            img.height = 480;
+                            td.appendChild(img);
+                        } else {
+                            td.textContent = cell.trim(); //두 번째 열에 위반 시간 표시
+                        }
+                        tr.appendChild(td);
+                    });
+
+                    tbody.appendChild(tr);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error loading CSV file:', error);
+            // CSV 파일이 없을 경우, 데이터가 없다는 메시지 출력
+            if (error.message === 'File not found') {
+                showTableDate();
+                const tbody = document.querySelector('#table tbody');
+                tbody.innerHTML = '';
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.textContent = '저장된 데이터가 없습니다';
+                td.colSpan = 2;
+                tr.appendChild(td);
+                tbody.appendChild(tr);
+            }
+        });
     }
-  }
-}
+
+    function showTableDate() {
+        const tableDate = document.getElementById('table_date');
+        tableDate.textContent = `${currentDate.getFullYear()}년 ${(currentDate.getMonth() + 1).toString().padStart(2, '0')}월 ${currentDate.getDate().toString().padStart(2, '0')}일` + " 신호위반 차량 목록";
+    }
+
+    // 현재 시간을 표시하는 함수
+    function updateTime() {
+        const currentTime = new Date();
+        const year = currentTime.getFullYear();
+        const month = (currentTime.getMonth() + 1).toString().padStart(2, '0');
+        const day = currentTime.getDate().toString().padStart(2, '0');
+        const hours = currentTime.getHours().toString().padStart(2, '0');
+        const minutes = currentTime.getMinutes().toString().padStart(2, '0');
+        const seconds = currentTime.getSeconds().toString().padStart(2, '0');
+        const formattedTime = `${year}년 ${month}월 ${day}일 ${hours}시 ${minutes}분 ${seconds}초`;
+
+        const currentTimeElement = document.getElementById('date');
+        currentTimeElement.textContent = "현재 시간: " + formattedTime;
+    }
+
+    prevButton.addEventListener('click', function() {
+        currentPage = Math.max(0, currentPage - 1);
+        updateDate(-1);
+        loadCSVData();
+    });
+
+    nextButton.addEventListener('click', function() {
+        currentPage = Math.min(Math.floor(table.rows.length / rowsPerPage), currentPage + 1);
+        updateDate(1);
+        loadCSVData();
+    });
+
+    function updateDate(diff) {
+        currentDate.setDate(currentDate.getDate() + diff);
+        csvFileName = getCurrentCSVFileName(); // CSV 파일 이름을 업데이트
+    }
+
+    // 초기화
+    loadCSVData();
+    updateTime();
+    setInterval(updateTime, 1000);
+
+    // 1분마다 CSV 데이터를 다시 로드
+    setInterval(loadCSVData, 60000);
+});
